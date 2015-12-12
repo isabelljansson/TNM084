@@ -36,7 +36,11 @@ function init()
 
     //Init plane
     var geometry = new THREE.PlaneGeometry( 100, 100, 40, 40 );
-    var material = new THREE.MeshBasicMaterial( {color: 0x8888ff} );
+    material = new THREE.ShaderMaterial( {
+        vertexShader: document.getElementById( 'vertexShader' ).textContent,
+        fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+    } );
+    
     plane = new THREE.Mesh( geometry, material );
     plane.position.set(0, -50, -100);
 	scene.add( plane );

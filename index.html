@@ -1,20 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <title>Procedural water</title>
+        <title>WebGL - Procedural water</title>
         <meta charset="utf-8">
         <style>
             body {background-color: white;}
         </style>
     </head>
     <body>
-    <div id="container"><br /><br /><br /><br /><br />Generating waterworld...</div>
-    
-        <script src='js/three.min.js'></script>
+        <div id="container">Generating water...</div>
+
+        <!--VERTEX SHADER-->
+        <script type="x-shader/x-vertex" id="vertexShader">
+            varying vec2 vUv;
+
+            void main() 
+            {
+                vUv = uv;
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            }
+        </script>
+
+        <!--FRAGMENT SHADER-->
+        <script type="x-shader/x-vertex" id="fragmentShader">
+            varying vec2 vUv;
+
+            void main() 
+            {
+                // color is RGBA: u, v, 0, 1
+                gl_FragColor = vec4( vec3( vUv, 0.5 ), 1. );
+            }
+        </script>
+
+        <script src='libs/three.min.js'></script>
         <script src='js/main.js'></script>
 
     </body>
 </html>
+
+<!-- https://www.clicktorelease.com/blog/vertex-displacement-noise-3d-webgl-glsl-three-js 
+GOOD EXAMPLE WITH WEBGL, THREE GLSL!
+-->
 
 
 
