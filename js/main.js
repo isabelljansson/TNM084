@@ -1,6 +1,6 @@
 //Isabell Jansson
 
-var scene, renderer, plane;
+var scene, renderer, plane, start = Date.now();
 
 
 init();
@@ -22,7 +22,7 @@ function init()
     scene.add(camera);
 
     //Renderer
-	renderer = new THREE.WebGLRenderer(container);
+	renderer = new THREE.WebGLRenderer();
     renderer.setClearColor( 0xffffff );
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
@@ -36,11 +36,22 @@ function init()
 
     //Init plane
     var geometry = new THREE.PlaneGeometry( 100, 100, 40, 40 );
+    
     material = new THREE.ShaderMaterial( {
+        //define uniforms to use...
+        uniforms: 
+        { 
+            time: 
+            {
+                type: "f",  //float
+                value: 0.0  //initialized to 0
+            }
+        },
+
         vertexShader: document.getElementById( 'vertexShader' ).textContent,
         fragmentShader: document.getElementById( 'fragmentShader' ).textContent
     } );
-    
+
     plane = new THREE.Mesh( geometry, material );
     plane.position.set(0, -50, -100);
 	scene.add( plane );
@@ -57,11 +68,9 @@ function init()
 function animate() 
 {
     requestAnimationFrame( animate );
-	render();		
+    material.uniforms.time.value +=  0.01;
+     //Another way to increase time: = .00025 * ( Date.now() - start );
+    
+	renderer.render( scene, camera );		
 
-}
-
-function render() 
-{	
-	renderer.render( scene, camera );
 }

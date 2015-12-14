@@ -13,11 +13,16 @@
         <!--VERTEX SHADER-->
         <script type="x-shader/x-vertex" id="vertexShader">
             varying vec2 vUv;
+            uniform float time;
+            varying vec4 curvePos;
 
             void main() 
             {
                 vUv = uv;
-                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+                curvePos = modelMatrix * vec4(position, 1.0);
+
+                curvePos.y = sin(time)*20.0;
+                gl_Position = projectionMatrix * viewMatrix * curvePos;
             }
         </script>
 
@@ -38,7 +43,9 @@
     </body>
 </html>
 
-<!-- https://www.clicktorelease.com/blog/vertex-displacement-noise-3d-webgl-glsl-three-js 
+<!-- 
+
+https://www.clicktorelease.com/blog/vertex-displacement-noise-3d-webgl-glsl-three-js 
 GOOD EXAMPLE WITH WEBGL, THREE GLSL!
 -->
 
