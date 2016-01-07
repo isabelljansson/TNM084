@@ -41,7 +41,7 @@ function (
 
     	//camera
         camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 20000 );
-        camera.position.set(0, 40, 100);
+        camera.position.set(0, 100, 200);
     	camera.lookAt(scene.position);
         scene.add(camera);
 
@@ -65,7 +65,7 @@ function (
         //--------------------------------
 
         //geometry
-        var waterGeometry = new THREE.PlaneGeometry( 200, 200, 100, 100 );
+        var waterGeometry = new THREE.PlaneBufferGeometry( 200, 200, 100, 100 );
         
         //shader variables
         waterUniforms = 
@@ -96,7 +96,7 @@ function (
 
         //create the water and add it to the scene
         water = new THREE.Mesh( waterGeometry, waterMaterial );
-        water.position.set(0, -50, -100);
+        water.position.set(0, 0, 0);
     	scene.add( water );
     	water.rotation.x = - Math.PI/2;
 
@@ -106,7 +106,7 @@ function (
         //--------------------------------
 
         //geometry
-        var bottomGeometry = new THREE.PlaneGeometry( 200, 200, 100, 100 );
+        var bottomGeometry = new THREE.PlaneBufferGeometry( 200, 200, 100, 100 );
         
         //shader variables
         bottomUniforms = 
@@ -137,12 +137,14 @@ function (
 
         //create the water and add it to the scene
         bottom = new THREE.Mesh( bottomGeometry, bottomMaterial );
-        bottom.position.set(0, -50, -100);
+        bottom.position.set(0, 0, 0);
         scene.add( bottom );
         bottom.rotation.x = - Math.PI/2;
       
 
-        controls = new THREE.OrbitControls(camera);
+        controls = new THREE.OrbitControls(camera, renderer.domElement);
+      
+
     	container.innerHTML = "";
         document.body.appendChild( renderer.domElement );       
     }
