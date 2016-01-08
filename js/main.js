@@ -1,27 +1,22 @@
 //Isabell Jansson
 
 require([
-    "../libs/text!../shaders/wVertexShader.glsl",
-    "../libs/text!../shaders/wFragmentShader.glsl",
-    "../libs/text!../shaders/bVertexShader.glsl",
-    "../libs/text!../shaders/bFragmentShader.glsl",
+    "../libs/text!../shaders/vertexShader.glsl",
+    "../libs/text!../shaders/fragmentShader.glsl",
     "../libs/text!../shaders/simplex-noise-3d.glsl",
     "../libs/orbit-controls"
 ],
 
 function (
-    waterVertexShader,
-    waterFragmentShader,
-    bottomVertexShader,
-    bottomFragmentShader,
-    Noise) 
+    vertexShader,
+    fragmentShader,
+    noise) 
 {
     "use strict";
 
 
     var scene, renderer, camera, controls;
-    var water, waterMaterial, waterUniforms, waterAttributes, start = Date.now();
-    var bottom, bottomMaterial, bottomUniforms, bottomAttributes;
+    var terrain, terrainMaterial, terrainUniforms, terrainAttributes, start = Date.now();
 
 
     init();
@@ -60,86 +55,47 @@ function (
     	scene.add(light);
 
 
-        //--------------------------------
-        // WATER
-        //--------------------------------
-
-        //geometry
-        var waterGeometry = new THREE.PlaneBufferGeometry( 200, 200, 100, 100 );
-        
-        //shader variables
-        waterUniforms = 
-        { 
-            time: 
-            {
-                type: "f",  //float
-                value: 0.0  //initialized to 0
-            }
-        }
-        waterAttributes = 
-        {
-            displacement:
-            {
-                type: 'f',  //float
-                value: []   //empty array
-            }
-        }
-
-        //material
-        waterMaterial = new THREE.ShaderMaterial( 
-        {
-            uniforms: waterUniforms,
-            attributes: waterAttributes,
-            vertexShader: Noise + waterVertexShader,
-            fragmentShader: waterFragmentShader
-        } );
-
-        //create the water and add it to the scene
-        water = new THREE.Mesh( waterGeometry, waterMaterial );
-        water.position.set(0, 0, 0);
-    	scene.add( water );
-    	water.rotation.x = - Math.PI/2;
-
 
         //--------------------------------
         // BOTTOM
         //--------------------------------
 
         //geometry
-        var bottomGeometry = new THREE.PlaneBufferGeometry( 200, 200, 100, 100 );
+        var terrainGeometry = new THREE.PlaneBufferGeometry( 200, 200, 100, 100 );
         
         //shader variables
-        bottomUniforms = 
+        terrainUniforms = 
         {   
-            /*time: 
+            time: 
             {
                 type: "f",  //float
                 value: 0.0  //initialized to 0
-            }*/
+            }
         }
-        bottomAttributes = 
+        terrainAttributes = 
         {
+            /*
             displacement:
             {
                 type: 'f',  //float
                 value: []   //empty array
-            }
+            }*/
         }
 
         //material
-        bottomMaterial = new THREE.ShaderMaterial( 
+        terrainMaterial = new THREE.ShaderMaterial( 
         {
-            uniforms: bottomUniforms,
-            attributes: bottomAttributes,
-            vertexShader: Noise + bottomVertexShader,
-            fragmentShader: Noise + bottomFragmentShader
+            uniforms: terrainUniforms,
+            attributes: terrainAttributes,
+            vertexShader: noise + vertexShader,
+            fragmentShader: noise + fragmentShader
         } );
 
         //create the water and add it to the scene
-        bottom = new THREE.Mesh( bottomGeometry, bottomMaterial );
-        bottom.position.set(0, 0, 0);
-        scene.add( bottom );
-        bottom.rotation.x = - Math.PI/2;
+        terrain = new THREE.Mesh( terrainGeometry, terrainMaterial );
+        terrain.position.set(0, 0, 0);
+        scene.add( terrain );
+        terrain.rotation.x = - Math.PI/2;
       
 
         controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -153,9 +109,8 @@ function (
     function animate() 
     {
         requestAnimationFrame( animate );
-        waterUniforms.time.value +=  0.01;
-        //material.attributes.displacement.value += Math.sin(10.0);
-        //Another way to increase time: = .00025 * ( Date.now() - start );
+        terrainUniforms.time.value +=  0.01;
+        
         
     	renderer.render( scene, camera );		
         controls.update();
