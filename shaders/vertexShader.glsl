@@ -1,36 +1,36 @@
 precision mediump float;
 
-varying vec4 vertexPos;
+//attribute vec3 vertexPos;
 
 varying vec3 worldCoord;
-
+//varying vec3 worldNormal;
 
 uniform float time;
 
 void main() 
 {
-	//vec3 height;
     float n;
-    //pos = position;
-    vertexPos = modelMatrix * vec4(position, 1.0);
-    worldCoord = vertexPos.xyz;
 
-    //TERRAIN
-    n  = snoise(vec3(position.x*0.01, position.y*0.01, 1.0));
-    n += snoise(vec3(position.x*0.05,  position.y*0.05, 1.0)*0.5);
-    //n += snoise(vec3(pos.x*0.1,  pos.y*0.1, 1.0)*0.25);
-    //n += snoise(vec3(pos.x*0.2,  pos.y*0.2, 1.0)*0.125);
+    //vertexPos is an attribute - the value is set in the main and applied to a single vertex in vs
+    //For some reason...vertexPos is an attribute based on the position, 
+    //and when vertexPos is set in the main, it is stored in the position attribute? 
+    //Therefore it only works when I'm using 'position' here in the vs, and not 'vertexPos'? 
+    vec4 worldPos = modelMatrix * vec4(position, 1.0); //position always needs to be in the vs...three.js bug?
+    worldCoord = worldPos.xyz;
 
-    vertexPos.y = n*20.0;
 
     //WATER
-    float n1 = snoise(vec3(0.01, position.y*time*0.05, 0.03));
+    float n1 = snoise(vec3(1.0, worldPos.y*time*0.2, 1.0));
+    //float n1 = 0.0;
 
     //Set pixel to either terrain or water
     vec4 pos;
-    vertexPos.y < 0.0 ? 
-    	pos = vec4(vertexPos.x, n1, vertexPos.z, 1.0) : 
-    	pos = vertexPos;
+    worldPos.y < 0.0 ? 
+        worldPos = vec4(worldPos.x, n1, worldPos.z, 1.0) : 
+        worldPos = vec4(worldPos.x, worldPos.y, worldPos.z, 1.0);
 
-    gl_Position = projectionMatrix * viewMatrix * pos;
+
+
+    gl_Position = projectionMatrix * viewMatrix * worldPos;
 }
+

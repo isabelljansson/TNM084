@@ -4,21 +4,21 @@ require([
     "../libs/text!../shaders/vertexShader.glsl",
     "../libs/text!../shaders/fragmentShader.glsl",
     "../libs/text!../shaders/simplex-noise-3d.glsl",
+    "../libs/noise",
     "../libs/orbit-controls"
 ],
 
 function (
     vertexShader,
     fragmentShader,
-    noise) 
+    noiseglsl) 
 {
     "use strict";
 
 
     var scene, renderer, camera, controls;
-    var terrain, terrainMaterial, terrainUniforms, terrainAttributes, start = Date.now();
-
-
+    var terrain, terrainMaterial, terrainUniforms, terrainGeometry, vertexPos, vertexNormal, start = Date.now();
+    
     init();
     animate();
 
@@ -57,13 +57,10 @@ function (
 
 
         //--------------------------------
-        // BOTTOM
+        // TERRAIN  
         //--------------------------------
 
-        //geometry
-        var terrainGeometry = new THREE.PlaneBufferGeometry( 200, 200, 100, 100 );
-        
-        //shader variables
+        //shader uniforms
         terrainUniforms = 
         {   
             time: 
@@ -71,38 +68,67 @@ function (
                 type: "f",  //float
                 value: 0.0  //initialized to 0
             }
-        }
-        terrainAttributes = 
-        {
-            /*
-            displacement:
-            {
-                type: 'f',  //float
-                value: []   //empty array
-            }*/
-        }
+        };
 
         //material
         terrainMaterial = new THREE.ShaderMaterial( 
         {
             uniforms: terrainUniforms,
-            attributes: terrainAttributes,
-            vertexShader: noise + vertexShader,
-            fragmentShader: noise + fragmentShader
+            vertexShader: noiseglsl + vertexShader,
+            fragmentShader: noiseglsl + fragmentShader
         } );
 
-        //create the water and add it to the scene
+        //geometry
+        terrainGeometry = new THREE.PlaneBufferGeometry(200,200, 100, 100);
+
+        //Copy attributes.position.array to vertexPos, every vertex will be a vec3
+        vertexPos = new THREE.BufferAttribute(terrainGeometry.attributes.position.array, 3);
+        //vertexNormal = new THREE.BufferAttribute(terrainGeometry.attributes.normal.array, 3);       
+                    
+        terrainGeometry.addAttribute( 'vertexPos', vertexPos );
+        //terrainGeometry.addAttribute( 'vertexNormal', vertexNormal );
+        
+
+        //create a terrain mesh and add it to the scene
         terrain = new THREE.Mesh( terrainGeometry, terrainMaterial );
         terrain.position.set(0, 0, 0);
-        scene.add( terrain );
         terrain.rotation.x = - Math.PI/2;
-      
+        scene.add( terrain );
 
         controls = new THREE.OrbitControls(camera, renderer.domElement);
       
 
     	container.innerHTML = "";
-        document.body.appendChild( renderer.domElement );       
+        document.body.appendChild( renderer.domElement );  
+        /*
+        console.log('första');
+        console.log(vertexPos.array[0])
+        console.log(vertexPos.array[1])
+        console.log(vertexPos.array[2])
+        console.log('andra')
+        console.log(vertexPos.array[3])
+        console.log(vertexPos.array[4])
+        console.log(vertexPos.array[5])
+        */
+    }
+
+    function updateVertexPos()
+    {
+        
+        var height;
+        for ( var i = 0; i < vertexPos.length; i += 3 ) 
+        {
+            height  = noise.simplex2(vertexPos.array[i] * 0.01, vertexPos.array[i + 1] * 0.01);
+            height += noise.simplex2(vertexPos.array[i] * 0.05, vertexPos.array[i + 1] * 0.05) * 0.5;
+            height += noise.simplex2(vertexPos.array[i] * 0.10, vertexPos.array[i + 1] * 0.10) * 0.25;
+            //height += noise.simplex2(vertexPos.array[i] * 0.20, vertexPos.array[i + 1] * 0.20) * 0.125;
+
+            vertexPos.array[i + 2] = height * 15;
+        }
+        
+
+
+
     }
 
 
@@ -110,7 +136,12 @@ function (
     {
         requestAnimationFrame( animate );
         terrainUniforms.time.value +=  0.01;
-        
+
+        //Update vertex position, the position is applied to every vertex through the vertex shader
+        updateVertexPos();
+        terrainGeometry.attributes.vertexPos.array.needsUpdate = true;
+        //terrainGeometry.attributes.vertexNormal.needsUpdate = true;
+
         
     	renderer.render( scene, camera );		
         controls.update();
