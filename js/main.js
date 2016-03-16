@@ -16,9 +16,10 @@ function (
     "use strict";
 
 
-    var scene, renderer, camera, controls;
+    var scene, refrScene, renderer, camera, controls;
     var terrain, terrainMaterial, terrainUniforms, terrainGeometry, vertexPos, vertexNormal, start = Date.now();
-    
+    var reflectionMap, refractionMap;
+
     init();
     animate();
 
@@ -33,12 +34,37 @@ function (
     	//scene
     	container = document.getElementById( 'container' );
     	scene = new THREE.Scene();
+        refrScene = new THREE.Scene();
 
     	//camera
         camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 20000 );
         camera.position.set(0, 100, 200);
     	camera.lookAt(scene.position);
         scene.add(camera);
+
+        //initialize reflection an refraction map
+        reflectionMap = new THREE.WebGLRenderTarget( 
+            window.innerWidth,
+            window.innerHeight,
+            { 
+                minFilter: THREE.LinearFilter,
+                magFilter: THREE.NearestFilter,
+                format: THREE.RGBFormat
+            }
+        );
+
+        refractionMap = new THREE.WebGLRenderTarget( 
+            window.innerWidth,
+            window.innerHeight,
+            { 
+                minFilter: THREE.LinearFilter,
+                magFilter: THREE.NearestFilter,
+                format: THREE.RGBFormat
+            }
+        );
+
+
+
 
         //Renderer
     	renderer = new THREE.WebGLRenderer();
@@ -63,11 +89,10 @@ function (
         //shader uniforms
         terrainUniforms = 
         {   
-            time: 
-            {
-                type: "f",  //float
-                value: 0.0  //initialized to 0
-            }
+            time: { type: "f", value: 1.0 },
+            reflectionMap: { type: "t", value: reflectionMap },
+            refractionMap: { type: "t", value: refractionMap },
+            normalSampler: { type: "t", value: null }
         };
 
         //material
@@ -82,10 +107,10 @@ function (
         terrainGeometry = new THREE.PlaneBufferGeometry(200,200, 100, 100);
 
         //Copy attributes.position.array to vertexPos, every vertex will be a vec3
-        vertexPos = new THREE.BufferAttribute(terrainGeometry.attributes.position.array, 3);
+        //vertexPos = new THREE.BufferAttribute(terrainGeometry.attributes.position.array, 3);
         //vertexNormal = new THREE.BufferAttribute(terrainGeometry.attributes.normal.array, 3);       
                     
-        terrainGeometry.addAttribute( 'vertexPos', vertexPos );
+        //terrainGeometry.addAttribute( 'vertexPos', vertexPos );
         //terrainGeometry.addAttribute( 'vertexNormal', vertexNormal );
         
 
@@ -93,10 +118,11 @@ function (
         terrain = new THREE.Mesh( terrainGeometry, terrainMaterial );
         terrain.position.set(0, 0, 0);
         terrain.rotation.x = - Math.PI/2;
+        terrain.rotation.z = -Math.PI;
         scene.add( terrain );
 
         controls = new THREE.OrbitControls(camera, renderer.domElement);
-      
+        //updateVertexPos();
 
     	container.innerHTML = "";
         document.body.appendChild( renderer.domElement );  
@@ -111,7 +137,7 @@ function (
         console.log(vertexPos.array[5])
         */
     }
-
+/*
     function updateVertexPos()
     {
         
@@ -126,11 +152,11 @@ function (
             vertexPos.array[i + 2] = height * 15;
         }
         
-
+       
 
 
     }
-
+*/
 
     function animate() 
     {
@@ -138,11 +164,15 @@ function (
         terrainUniforms.time.value +=  0.01;
 
         //Update vertex position, the position is applied to every vertex through the vertex shader
-        updateVertexPos();
-        terrainGeometry.attributes.vertexPos.array.needsUpdate = true;
-        //terrainGeometry.attributes.vertexNormal.needsUpdate = true;
-
+        //updateVertexPos();
+        //terrainGeometry.attributes.vertexPos.array.needsUpdate = true;
+        terrainGeometry.computeVertexNormals();
+        terrainGeometry.normalsNeedUpdate = true;
         
+        //render to reflection texture
+        //renderer.render( scene, secCam, reflectionMap, true );
+        //render to refraction texture
+        //renderer.render( refrScene, camera, refractionMap, true );
     	renderer.render( scene, camera );		
         controls.update();
 
