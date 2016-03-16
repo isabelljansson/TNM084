@@ -12,8 +12,8 @@ uniform float time;
 float getTerrainHeight(vec3 p)
 {
     float height = 0.0;
-    height  += snoise(vec3(position.x*0.01, position.y*0.01, 1.0));
-    height += snoise(vec3(position.x*0.05,  position.y*0.05, 1.0)*0.5);
+    height  += snoise(vec3(p.x*0.01, 0.01, p.z*0.01));
+    height += snoise(vec3(p.x*0.05, 0.05, p.z*0.05)*0.5);
     //n += snoise(vec3(pos.x*0.1,  pos.y*0.1, 1.0)*0.25);
     //n += snoise(vec3(pos.x*0.2,  pos.y*0.2, 1.0)*0.125);
     return height*15.0;
@@ -58,7 +58,7 @@ float getWaterHeight(vec3 p)
     //height =  sin(snoise(vec3(p.x*0.01, 0.0, p.z*0.05)))*0.1;
 
     //height += wave;*/
-    height = snoise(vec3(1.0, p.y*time*0.2, 1.0));
+    height = snoise(vec3(1.0, p.y*time*0.1, 1.0));
     return height;
 }
 
@@ -71,11 +71,10 @@ void main()
     //and when vertexPos is set in the main, it is stored in the position attribute? 
     //Therefore it only works when I'm using 'position' here in the vs, and not 'vertexPos'? 
     vec4 worldPos = modelMatrix * vec4(position, 1.0); //position always needs to be in the vs...three.js bug?
-    
 
-    //Generate height
+    //Generate height for terrain
+    //Entire plane is now terrain
     worldPos.y = getTerrainHeight(worldPos.xyz);
-
 
     worldCoord = worldPos.xyz;
 
@@ -88,26 +87,30 @@ void main()
         worldPos;
 
     //update terrain normal
-    vec3 xDelta = vec3(1.0,0.0,0.0)/10.0;
-    vec3 zDelta = vec3(0.0,0.0,1.0)/10.0;
-    vec3 dx = vec3(worldPos.x - xDelta.x, getTerrainHeight(worldPos.xyz - xDelta), worldPos.z - xDelta.z) 
-            - vec3(worldPos.x + xDelta.x, getTerrainHeight(worldPos.xyz + xDelta), worldPos.z + xDelta.z);
-    vec3 dz = vec3(worldPos.x - zDelta.z, getTerrainHeight(worldPos.xyz - zDelta), worldPos.z - zDelta.z) 
-            - vec3(worldPos.x + zDelta.x, getTerrainHeight(worldPos.xyz + zDelta), worldPos.z + zDelta.z);
-    vec4 norm = modelMatrix * vec4(normalize(cross(dx,dz)), 1.0);
-    rockNormal = normalize(norm.xyz);
+    vec3 xDelta = vec3(1.0,0.0,0.0)/20.0;
+    vec3 zDelta = vec3(0.0,0.0,1.0)/20.0;
+
+    // p1 = worldPos
+    // v = p2 - p1
+    // w = p3 - p1
+    vec3 v = (vec3(worldPos.x + xDelta.x, getTerrainHeight(worldPos.xyz + xDelta), worldPos.z + xDelta.z)) - worldPos.xyz;
+    vec3 w = (vec3(worldPos.x + zDelta.x, getTerrainHeight(worldPos.xyz + zDelta), worldPos.z + zDelta.z)) - worldPos.xyz;
+    rockNormal.x = (v.y * w.z) - (v.z * w.y);
+    rockNormal.y = (v.z * w.x) - (v.x * w.z);
+    rockNormal.z = (v.x * w.y) - (v.y * w.x);
+    rockNormal = normalize(rockNormal);
 
 
     //WATER
-    //n1 = snoise(vec3(1.0, worldPos.y*time*0.2, 1.0));
-    //float n1 = 0.0;
 
-    dx = vec3(worldPos.x - xDelta.x, getWaterHeight(worldPos.xyz - xDelta), worldPos.z - xDelta.z) 
-       - vec3(worldPos.x + xDelta.x, getWaterHeight(worldPos.xyz + xDelta), worldPos.z + xDelta.z);
-    dz = vec3(worldPos.x - zDelta.z, getWaterHeight(worldPos.xyz - zDelta), worldPos.z - zDelta.z) 
-       - vec3(worldPos.x + zDelta.x, getWaterHeight(worldPos.xyz + zDelta), worldPos.z + zDelta.z);
-    norm = modelMatrix * vec4(normalize(cross(dx,dz)), 1.0);
-    waterNormal = normalize(norm.xyz);
+    // p1 = worldPos
+    v = (vec3(worldPos.x + xDelta.x, getWaterHeight(worldPos.xyz + xDelta), worldPos.z + xDelta.z)) - worldPos.xyz;
+    w = (vec3(worldPos.x + zDelta.x, getWaterHeight(worldPos.xyz + zDelta), worldPos.z + zDelta.z)) - worldPos.xyz;
+    waterNormal.x = (v.y * w.z) - (v.z * w.y);
+    waterNormal.y = (v.z * w.x) - (v.x * w.z);
+    waterNormal.z = (v.x * w.y) - (v.y * w.x);
+
+    waterNormal = normalize(waterNormal);
 
    
     

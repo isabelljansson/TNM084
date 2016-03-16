@@ -104,7 +104,7 @@ function (
         } );
 
         //geometry
-        terrainGeometry = new THREE.PlaneBufferGeometry(200,200, 100, 100);
+        terrainGeometry = new THREE.PlaneBufferGeometry(200,200, 200, 200);
 
         //Copy attributes.position.array to vertexPos, every vertex will be a vec3
         //vertexPos = new THREE.BufferAttribute(terrainGeometry.attributes.position.array, 3);

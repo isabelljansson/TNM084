@@ -82,14 +82,17 @@ void main()
     vec3 lightPos = normalize(vec3(0.0, 1.0, 0.5));
     vec3 lightDir = normalize(lightPos - worldCoord);
     vec3 viewDir = normalize(-worldCoord);
+    vec4 finalColor, finalRock, finalWater;
+    vec3 diffuseLight = vec3(0.0); //Color for diffuise light
+    vec3 specularLight = vec3(0.0); //Color for specular light
 
-	vec4 finalColor, finalRock, finalWater;
-    vec3 diffuseLight = vec3(0.0);
-    vec3 specularLight = vec3(0.0);
-	
+    //Calculate specular and diffuse light 
+    sunLight(waterNormal, viewDir, 100.0, 2.0, 0.5, diffuseLight, specularLight, lightDir);
+
     float depth = - worldCoord.y; //Depth of the water
 
     /*------------ROCKS-----------*/
+    //Rock normal doesn't affect rock color atm
     finalRock = rockColor(worldCoord);
 
     //Add some bumb mapping to the rocks
@@ -111,6 +114,7 @@ void main()
     float lambertian = dot(normalize(adjustedLightPos), surfaceNormal);
     lambertian = max(0.05, lambertian);
     finalRock *= lambertian; //*color depending on the sun's position
+    
 
 
 
@@ -133,7 +137,7 @@ void main()
     vec3 scatter = max(0.0, dot(waterNormal, viewDir)) * finalWater.rgb;
     vec3 albedo = mix(diffuseLight * 0.3 + scatter, vec3(0.1) + specularLight, reflectance);
 
-    /*alt 2
+    /*alt 2*/
     vec4 sky = vec4(0.6, 0.8, 1.0, 1.0);
     float thickness = depth / max (cosTheta, 0.01);
     float dWater = minOpacity + (1.0 - minOpacity) * sqrt (min (thickness / opaqueDepth, 1.0));
@@ -144,21 +148,69 @@ void main()
     float alpha = reflectance + (1.0 - reflectance) * dWater;
     //alpha should be used as the alpha chanel in finalColor = mix(finalRock, vec4(albedo, 1.0), 0.7) 
     //not working atm
-*/
+
+
+    //simple phong shading
+    float lambertian2 = max(dot(lightDir,waterNormal), 0.0);
+    vec4 phong = vec4(lambertian2*diffuseLight + 2.0*specularLight, 1.0);
 
     //set finalColor to either water or rock
     //alt 1
     
-    depth > 0.0 ?
+    //finalColor = mix(finalRock, phong, 0.7) : 
+    /*depth > 0.0 ?
         finalColor = mix(finalRock, vec4(albedo, 1.0), 0.7) : 
-        finalColor = finalRock;
+        finalColor = finalRock;*/
 
     //alt 2
-    /*
+    
     depth > 0.0 ?
         finalColor = mix(finalRock, vec4(finalWater.rgb, 1.0), alpha) : 
         finalColor = finalRock;
-*/
+
 
     gl_FragColor = finalColor ;
 }
+
+
+
+
+/*
+PHONG SHADING
+
+const vec3 lightPos = vec3(1.0, 1.0, 1.0);
+const vec3 diffuseColor = vec3(0.5, 0.0, 0.0);
+const vec3 specColor = vec3(1.0, 1.0, 1.0);
+
+void main(){
+  gl_Position = projection * modelview * vec4(inputPosition, 1.0);
+
+  // all following gemetric computations are performed in the
+  // camera coordinate system (aka eye coordinates)
+  vec3 normal = vec3(normalMat * vec4(inputNormal, 0.0));
+  vec4 vertPos4 = modelview * vec4(inputPosition, 1.0);
+  vec3 vertPos = vec3(vertPos4) / vertPos4.w;
+  vec3 lightDir = normalize(lightPos - vertPos);
+  vec3 reflectDir = reflect(-lightDir, normal);
+  vec3 viewDir = normalize(-vertPos);
+
+  float lambertian = max(dot(lightDir,normal), 0.0);
+  float specular = 0.0;
+  
+  if(lambertian > 0.0) {
+    float specAngle = max(dot(reflectDir, viewDir), 0.0);
+    specular = pow(specAngle, 4.0);
+
+    // the exponent controls the shininess (try mode 2)
+    if(mode == 2)  specular = pow(specAngle, 16.0);
+       
+    // according to the rendering equation we would need to multiply
+    // with the the "lambertian", but this has little visual effect
+    if(mode == 3) specular *= lambertian;
+    // switch to mode 4 to turn off the specular component
+    if(mode == 4) specular *= 0.0;
+  }
+  
+  forFragColor = vec4(lambertian*diffuseColor + specular*specColor, 1.0);
+}
+*/
