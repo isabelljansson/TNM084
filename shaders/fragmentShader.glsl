@@ -8,7 +8,7 @@ uniform sampler2D refractionMap;
 varying vec3 worldCoord;
 varying vec3 waterNormal;
 varying vec3 rockNormal;
-varying float n1; //not used for the moment
+varying float isWater;
 
 // p is a position
 vec4 rockColor(vec3 p)
@@ -41,18 +41,17 @@ vec4 waterColor(vec3 p)
     return finalWater;
 }
 
-vec3 rockNormalBump(vec3 p) {
+/*
+vec3 rockNormalBump(vec3 p) 
+{
     vec3 normal = p; //points upwards
-    float amp = 0.08;
-    float temp;
-    
-    normal += snoise(p);
-    normal += snoise(2.0*p)*0.5*amp;
-    normal += snoise(4.0*p)*0.25*amp;
-    normal += snoise(16.0*p)*0.125*amp;
+
+    normal.x += 0.001*snoise(p.xyz);
+    normal.y += 0.001*snoise(p.xyz);
+    normal.z += 0.001*snoise(p.xyz);
 
     return normalize(normal);
-}
+}*/
 
 
 
@@ -79,7 +78,7 @@ void sunLight( const vec3 surfaceNormal, const vec3 eyeDirection, float shiny, f
 
 void main() 
 {
-    vec3 lightPos = normalize(vec3(0.0, 1.0, 0.5));
+    vec3 lightPos = normalize(vec3(0.0, 10.0, 0.5));
     vec3 lightDir = normalize(lightPos - worldCoord);
     vec3 viewDir = normalize(-worldCoord);
     vec4 finalColor, finalRock, finalWater;
@@ -95,25 +94,41 @@ void main()
     //Rock normal doesn't affect rock color atm
     finalRock = rockColor(worldCoord);
 
-    //Add some bumb mapping to the rocks
-    vec3 objectNormal = rockNormal;
-    vec3 tangent = normalize(cross(objectNormal, vec3(0.0,1.0,0.0)));
-    vec3 bitangent = cross (objectNormal, tangent);
-    vec3 v;
-    v.x = dot (lightPos, tangent);
-    v.z = dot (lightPos, bitangent);
-    v.y = dot (lightPos, objectNormal);
-    vec3 adjustedLightPos = normalize (v);
-    
     //add diffuse light to the rocks
     vec3 surfaceNormal;
-    depth > 3.0 ? 
-        surfaceNormal = rockNormalBump(rockNormal) :
-        surfaceNormal = rockNormal; //eller vec3(0.0,1.0,0.0)?
+   //if( worldCoord.y > -3.0) //The water is full opaque -> no nead to bump map
+    //{
 
-    float lambertian = dot(normalize(adjustedLightPos), surfaceNormal);
-    lambertian = max(0.05, lambertian);
-    finalRock *= lambertian; //*color depending on the sun's position
+        //Add some bumb mapping to the rocks
+        /*
+        vec3 objectNormal = rockNormal;
+        vec3 tangent = normalize(cross(objectNormal, vec3(0.0,1.0,0.0)));
+        vec3 bitangent = cross (objectNormal, tangent);
+        vec3 v;
+        v.x = dot(lightPos, tangent);
+        v.z = dot(lightPos, bitangent);
+        v.y = dot(lightPos, objectNormal);
+        vec3 adjustedLightPos = normalize (v);*/
+
+        surfaceNormal = rockNormal;//rockNormalBump(rockNormal);
+        float shininess = 16.0;
+        float lambertian = max(dot(lightDir,surfaceNormal), 0.05);
+        
+        vec3 reflectDir = reflect(-lightDir, surfaceNormal);
+        float specAngle = max(dot(reflectDir, viewDir), 0.0);
+        float specular = pow(specAngle, shininess/4.0);
+
+        //Påverkar vattnet närmast stenarna
+        //finalRock.xyz += rockNormal.x*0.5;//(vec3(0.5, 0.5, 0.5) * lambertian + specular * vec3(1.0, 1.0, 1.0));
+
+        //vec4(lambertian2*diffuseLight + 2.0*specularLight, 1.0);
+    //}
+        //surfaceNormal = rockNormalBump(rockNormal) :
+        //surfaceNormal = rockNormal; //eller vec3(0.0,1.0,0.0)?
+
+   // float lambertian = dot(normalize(adjustedLightPos), surfaceNormal);
+    //lambertian = max(0.05, lambertian);
+    //finalRock *= lambertian; //*color depending on the sun's position
     
 
 
@@ -121,23 +136,23 @@ void main()
     /*------------WATER-----------*/
     finalWater = waterColor(worldCoord);
 
-    //vec4 noise = getNoise(worldCoord.xz);
-
-
     //Schlick's approximation
-    float R0 = 0.1; //Minimal reflection, hould be 0.02 for air to water
-    float minOpacity = 0.15;
-    float opaqueDepth = 3.0;
+    float R0 = 0.1; //Minimal reflection, should be 0.02 for air to water
+    //float minOpacity = 0.15;
+    //float opaqueDepth = 3.0;
     float cosTheta = abs(dot(viewDir, waterNormal));
     
-    //Reflectance
+    //Reflectance according to Schlick's approximation
     float reflectance = R0 + (1.0 - R0) * pow( ( 1.0 - cosTheta ), 5.0 );
    
     /*alt 1*/
+
     vec3 scatter = max(0.0, dot(waterNormal, viewDir)) * finalWater.rgb;
     vec3 albedo = mix(diffuseLight * 0.3 + scatter, vec3(0.1) + specularLight, reflectance);
-
-    /*alt 2*/
+    
+    //vec3 albedo = mix(sunColor * diffuseLight * 0.3 + scatter, (vec3(0.1) + reflectionSample * 0.9 + reflectionSample * specularLight), reflectance);',
+    
+    /*alt 2
     vec4 sky = vec4(0.6, 0.8, 1.0, 1.0);
     float thickness = depth / max (cosTheta, 0.01);
     float dWater = minOpacity + (1.0 - minOpacity) * sqrt (min (thickness / opaqueDepth, 1.0));
@@ -146,71 +161,27 @@ void main()
     finalWater *= max(0.2, dot(normalize(lightPos), surfaceNormal));
     finalWater = (1.0 - reflectance) * finalWater + reflectance * sky;
     float alpha = reflectance + (1.0 - reflectance) * dWater;
-    //alpha should be used as the alpha chanel in finalColor = mix(finalRock, vec4(albedo, 1.0), 0.7) 
-    //not working atm
-
-
+*/
     //simple phong shading
-    float lambertian2 = max(dot(lightDir,waterNormal), 0.0);
-    vec4 phong = vec4(lambertian2*diffuseLight + 2.0*specularLight, 1.0);
+    //float lambertian2 = max(dot(lightDir,waterNormal), 0.0);
+    //vec4 phong = vec4(lambertian2*diffuseLight + 2.0*specularLight, 1.0);
 
     //set finalColor to either water or rock
     //alt 1
     
     //finalColor = mix(finalRock, phong, 0.7) : 
-    /*depth > 0.0 ?
-        finalColor = mix(finalRock, vec4(albedo, 1.0), 0.7) : 
-        finalColor = finalRock;*/
-
-    //alt 2
-    
     depth > 0.0 ?
-        finalColor = mix(finalRock, vec4(finalWater.rgb, 1.0), alpha) : 
+        finalColor = mix(finalRock, vec4(albedo, 1.0), 0.5) : 
         finalColor = finalRock;
 
+    //alt 2
+    vec4 green = vec4(0.0, 1.0, 0.0, 1.0);
+/*
+    isWater == 1.0 ?
+        finalColor = mix(mix(green, finalRock, smoothstep(0.0, 0.3, 1.0)), finalWater, 0.5) : 
+        finalColor = finalRock;//mix(green,finalRock, step(-worldCoord.y, worldCoord.y));
+*/
 
     gl_FragColor = finalColor ;
 }
 
-
-
-
-/*
-PHONG SHADING
-
-const vec3 lightPos = vec3(1.0, 1.0, 1.0);
-const vec3 diffuseColor = vec3(0.5, 0.0, 0.0);
-const vec3 specColor = vec3(1.0, 1.0, 1.0);
-
-void main(){
-  gl_Position = projection * modelview * vec4(inputPosition, 1.0);
-
-  // all following gemetric computations are performed in the
-  // camera coordinate system (aka eye coordinates)
-  vec3 normal = vec3(normalMat * vec4(inputNormal, 0.0));
-  vec4 vertPos4 = modelview * vec4(inputPosition, 1.0);
-  vec3 vertPos = vec3(vertPos4) / vertPos4.w;
-  vec3 lightDir = normalize(lightPos - vertPos);
-  vec3 reflectDir = reflect(-lightDir, normal);
-  vec3 viewDir = normalize(-vertPos);
-
-  float lambertian = max(dot(lightDir,normal), 0.0);
-  float specular = 0.0;
-  
-  if(lambertian > 0.0) {
-    float specAngle = max(dot(reflectDir, viewDir), 0.0);
-    specular = pow(specAngle, 4.0);
-
-    // the exponent controls the shininess (try mode 2)
-    if(mode == 2)  specular = pow(specAngle, 16.0);
-       
-    // according to the rendering equation we would need to multiply
-    // with the the "lambertian", but this has little visual effect
-    if(mode == 3) specular *= lambertian;
-    // switch to mode 4 to turn off the specular component
-    if(mode == 4) specular *= 0.0;
-  }
-  
-  forFragColor = vec4(lambertian*diffuseColor + specular*specColor, 1.0);
-}
-*/
